@@ -38,13 +38,21 @@ createRoot(root).render(<App />);`
 // same SSR props on both sides, which lets applications put Go-fetched data in
 // their router context. Unlike "replace", this uses hydrateRoot.
 //
-// Router.load starts matching synchronously. Async route loaders are not
-// awaited because gotossr's embedded JavaScript runtimes expose synchronous
-// evaluation only; such routes render their pending fallback during SSR.
+// The embedded JS runtimes evaluate synchronously and cannot await
+// router.load(). Populate TanStack's initial match stores directly instead.
+// This renders routes without async loaders; routes with async loaders render
+// their pending fallback until client hydration completes.
 var serverSPATanStackRenderFunction = `
 const router = createSSRRouter({ history: createMemoryHistory({ initialEntries: [props.__requestPath || "/"] }), props });
 try {
-  router.load();
+  const location = router.latestLocation;
+  const matches = router.matchRoutes(location);
+  router.stores.location.set(location);
+  router.stores.resolvedLocation.set(location);
+  router.stores.status.set("idle");
+  router.stores.setMatches(matches);
+  router._committed = matches;
+  router._rendered = [matches];
   globalThis.__ssr_result = renderToString(<RouterProvider router={router} />);
 } catch(e) { globalThis.__ssr_errors.push('RENDER_ERROR: ' + (e.stack || e.message || String(e))); globalThis.__ssr_result = ''; }`
 var clientSPATanStackRenderFunction = `
