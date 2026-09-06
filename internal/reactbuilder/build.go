@@ -10,6 +10,12 @@ import (
 )
 
 var loaders = map[string]esbuildApi.Loader{
+	// Vite projects often import Sass files. esbuild can bundle plain CSS syntax
+	// from these files; projects needing Sass-only syntax should precompile it.
+	".scss": esbuildApi.LoaderCSS,
+	".sass": esbuildApi.LoaderCSS,
+	// Supports Vite's ?raw imports (for example an embedded .d.ts template).
+	".d.ts":  esbuildApi.LoaderText,
 	".png":   esbuildApi.LoaderFile,
 	".svg":   esbuildApi.LoaderFile,
 	".jpg":   esbuildApi.LoaderFile,
@@ -30,6 +36,24 @@ var urlPolyfill = `if(typeof URL==="undefined"){function URL(u,b){if(b&&u.indexO
 var urlSearchParamsPolyfill = `if(typeof URLSearchParams==="undefined"){function URLSearchParams(v){this.p=[];if(typeof v==="string"){v=v.replace(/^\?/,"");if(v)for(var a=v.split("&"),i=0;i<a.length;i++){var x=a[i].split("="),k=decodeURIComponent(x.shift().replace(/\+/g," ")),z=decodeURIComponent(x.join("=").replace(/\+/g," "));this.append(k,z)}}else if(v&&typeof v==="object")for(var q in v)if(Object.prototype.hasOwnProperty.call(v,q))this.append(q,v[q])}URLSearchParams.prototype.append=function(k,v){this.p.push([String(k),String(v)])};URLSearchParams.prototype.delete=function(k){this.p=this.p.filter(function(x){return x[0]!==String(k)})};URLSearchParams.prototype.get=function(k){for(var i=0;i<this.p.length;i++)if(this.p[i][0]===String(k))return this.p[i][1];return null};URLSearchParams.prototype.getAll=function(k){var r=[];for(var i=0;i<this.p.length;i++)if(this.p[i][0]===String(k))r.push(this.p[i][1]);return r};URLSearchParams.prototype.has=function(k){return this.get(k)!==null};URLSearchParams.prototype.set=function(k,v){this.delete(k);this.append(k,v)};URLSearchParams.prototype.entries=function(){var i=0,p=this.p,o={next:function(){return i<p.length?{value:p[i++],done:false}:{done:true}}};if(typeof Symbol!=="undefined"&&Symbol.iterator)o[Symbol.iterator]=function(){return this};return o};URLSearchParams.prototype.keys=function(){var i=0,p=this.p,o={next:function(){return i<p.length?{value:p[i++][0],done:false}:{done:true}}};if(typeof Symbol!=="undefined"&&Symbol.iterator)o[Symbol.iterator]=function(){return this};return o};URLSearchParams.prototype.values=function(){var i=0,p=this.p,o={next:function(){return i<p.length?{value:p[i++][1],done:false}:{done:true}}};if(typeof Symbol!=="undefined"&&Symbol.iterator)o[Symbol.iterator]=function(){return this};return o};URLSearchParams.prototype.forEach=function(f,t){for(var i=0;i<this.p.length;i++)f.call(t,this.p[i][1],this.p[i][0],this)};URLSearchParams.prototype.toString=function(){return this.p.map(function(x){return encodeURIComponent(x[0])+"="+encodeURIComponent(x[1])}).join("&")};if(typeof Symbol!=="undefined"&&Symbol.iterator){URLSearchParams.prototype[Symbol.iterator]=URLSearchParams.prototype.entries}}`
 var messageChannelPolyfill = `if(typeof MessageChannel==="undefined"){function MessageChannel(){var self=this;this.port1={postMessage:function(msg){if(self.port2.onmessage)setTimeout(function(){self.port2.onmessage({data:msg})},0)}};this.port2={postMessage:function(msg){if(self.port1.onmessage)setTimeout(function(){self.port1.onmessage({data:msg})},0)}}}}`
 var abortControllerPolyfill = `if(typeof AbortController==="undefined"){function AbortController(){this.signal={aborted:false}}AbortController.prototype.abort=function(){this.signal.aborted=true}}`
+
+// viteCompatibilityPlugins stubs browser-only Vite worker modules when an SSR
+// route tree imports them. They are not executed during server rendering; the
+// browser bundle still uses Vite's real worker implementation.
+func viteCompatibilityPlugins() []esbuildApi.Plugin {
+	return []esbuildApi.Plugin{{
+		Name: "vite-worker-ssr-stub",
+		Setup: func(build esbuildApi.PluginBuild) {
+			build.OnResolve(esbuildApi.OnResolveOptions{Filter: `\\?worker$`}, func(args esbuildApi.OnResolveArgs) (esbuildApi.OnResolveResult, error) {
+				return esbuildApi.OnResolveResult{Path: args.Path, Namespace: "vite-worker-stub"}, nil
+			})
+			build.OnLoad(esbuildApi.OnLoadOptions{Filter: `.*`, Namespace: "vite-worker-stub"}, func(esbuildApi.OnLoadArgs) (esbuildApi.OnLoadResult, error) {
+				contents := `export default class Worker { constructor() { throw new Error("Vite worker is unavailable during SSR") } }`
+				return esbuildApi.OnLoadResult{Contents: &contents, Loader: esbuildApi.LoaderJS}, nil
+			})
+		},
+	}}
+}
 
 type BuildResult struct {
 	JS           string
@@ -54,6 +78,12 @@ func BuildServer(buildContents, frontendDir, assetRoute string) (BuildResult, er
 		MinifyIdentifiers: true,
 		MinifySyntax:      true,
 		Loader:            loaders,
+		// Vite projects commonly map @ to their source directory. Supporting the
+		// convention lets an SPA entry reuse its existing component imports.
+		Alias: map[string]string{
+			"@": frontendDir,
+		},
+		Plugins: viteCompatibilityPlugins(),
 		// Remove legal comments so they don't interfere with eval result
 		LegalComments: esbuildApi.LegalCommentsNone,
 		// We can inject the polyfills at the top of the generated js
@@ -85,6 +115,10 @@ func BuildClient(buildContents, frontendDir, assetRoute string, minify bool) (Bu
 		MinifyIdentifiers: minify,
 		MinifySyntax:      minify,
 		Loader:            loaders,
+		Alias: map[string]string{
+			"@": frontendDir,
+		},
+		Plugins: viteCompatibilityPlugins(),
 	}
 	return build(opts, true)
 }

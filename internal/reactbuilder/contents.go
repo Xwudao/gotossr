@@ -59,7 +59,11 @@ var clientSPATanStackRenderFunction = `
 const ssrPropsEl = document.getElementById("__SSR_PROPS__");
 const ssrProps = ssrPropsEl ? JSON.parse(ssrPropsEl.textContent || "{}") : {};
 const router = createSSRRouter({ history: createBrowserHistory(), props: ssrProps });
-hydrateRoot(document.getElementById("root"), <RouterProvider router={router} />);`
+const root = document.getElementById("root");
+const app = <RouterProvider router={router} />;
+// The embedded runtime may not complete TanStack's async route load. Avoid a
+// hydration mismatch when it consequently produced an empty server root.
+if (root.hasChildNodes()) hydrateRoot(root, app); else createRoot(root).render(app);`
 
 func buildWithTemplate(buildTemplate string, params map[string]interface{}) (string, error) {
 	templ, err := template.New("buildTemplate").Parse(buildTemplate)
@@ -181,7 +185,7 @@ func GenerateServerSPABuildContents(imports []string, appPath string, mode strin
 func GenerateClientSPABuildContents(imports []string, appPath string, mode string) (string, error) {
 	if mode == "tanstack" {
 		imports = append(imports,
-			`import { hydrateRoot } from "react-dom/client";`,
+			`import { createRoot, hydrateRoot } from "react-dom/client";`,
 			`import { RouterProvider, createBrowserHistory } from "@tanstack/react-router";`,
 			`import { createSSRRouter } from "`+appPath+`";`,
 		)
