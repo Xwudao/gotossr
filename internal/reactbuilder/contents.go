@@ -44,9 +44,16 @@ createRoot(root).render(<App />);`
 // their pending fallback until client hydration completes.
 var serverSPATanStackRenderFunction = `
 const router = createSSRRouter({ history: createMemoryHistory({ initialEntries: [props.__requestPath || "/"] }), props });
+// gotossr's runtime provides a minimal document shim, which makes TanStack's
+// environment probe look like a browser. Force its server rendering branch.
+router.isServer = true;
 try {
   const location = router.latestLocation;
-  const matches = router.matchRoutes(location);
+  // matchRoutes creates unresolved matches. The embedded JS runtime cannot
+  // await router.load(), so mark them resolved before RouterProvider renders.
+  // Components still run synchronously; routes that require async data must
+  // provide an SSR-safe fallback themselves.
+  const matches = router.matchRoutes(location).map((match) => ({ ...match, status: "success", _displayPending: false, _forcePending: false }));
   router.stores.location.set(location);
   router.stores.resolvedLocation.set(location);
   router.stores.status.set("idle");
