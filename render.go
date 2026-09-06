@@ -10,8 +10,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/yejune/gotossr/internal/html"
-	"github.com/yejune/gotossr/internal/utils"
+	"github.com/Xwudao/gotossr/internal/html"
+	"github.com/Xwudao/gotossr/internal/utils"
 )
 
 // RenderConfig is the config for rendering a route

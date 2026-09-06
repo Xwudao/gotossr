@@ -8,7 +8,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/yejune/gotossr/internal/utils"
+	"github.com/Xwudao/gotossr/internal/utils"
 )
 
 // https://github.com/tkrajina/typescriptify-golang-structs/blob/master/tscriptify/main.go#L139

@@ -4,7 +4,7 @@ import (
 	"example.com/echo/models"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	gossr "github.com/yejune/gotossr"
+	gossr "github.com/Xwudao/gotossr"
 	"log"
 	"math/rand"
 	"net/http"

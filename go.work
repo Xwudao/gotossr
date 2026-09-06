@@ -5,4 +5,5 @@ use (
 	./examples/echo
 	./examples/fiber
 	./examples/gin
+	./examples/tanstack-router
 )

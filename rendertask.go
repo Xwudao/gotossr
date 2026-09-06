@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/yejune/gotossr/internal/jsruntime"
-	"github.com/yejune/gotossr/internal/reactbuilder"
+	"github.com/Xwudao/gotossr/internal/jsruntime"
+	"github.com/Xwudao/gotossr/internal/reactbuilder"
 )
 
 type renderTask struct {

@@ -12,7 +12,7 @@ import (
 var baseTemplate = `
 import React from "react";
 {{range $import := .Imports}}{{$import}} {{end}}
-import App from "{{ .FilePath }}";
+{{ if .ImportApp }}import App from "{{ .FilePath }}";{{ end }}
 {{ if .SuppressConsoleLog }}console.log = () => {};{{ end }}
 {{ .RenderFunction }}`
 var serverRenderFunction = `renderToString(<App {...props} />);`
@@ -34,6 +34,25 @@ const root = document.getElementById("root");
 root.innerHTML = "";
 createRoot(root).render(<App />);`
 
+// TanStack Router apps export createSSRRouter. It receives the history and the
+// same SSR props on both sides, which lets applications put Go-fetched data in
+// their router context. Unlike "replace", this uses hydrateRoot.
+//
+// Router.load starts matching synchronously. Async route loaders are not
+// awaited because gotossr's embedded JavaScript runtimes expose synchronous
+// evaluation only; such routes render their pending fallback during SSR.
+var serverSPATanStackRenderFunction = `
+const router = createSSRRouter({ history: createMemoryHistory({ initialEntries: [props.__requestPath || "/"] }), props });
+try {
+  router.load();
+  globalThis.__ssr_result = renderToString(<RouterProvider router={router} />);
+} catch(e) { globalThis.__ssr_errors.push('RENDER_ERROR: ' + (e.stack || e.message || String(e))); globalThis.__ssr_result = ''; }`
+var clientSPATanStackRenderFunction = `
+const ssrPropsEl = document.getElementById("__SSR_PROPS__");
+const ssrProps = ssrPropsEl ? JSON.parse(ssrPropsEl.textContent || "{}") : {};
+const router = createSSRRouter({ history: createBrowserHistory(), props: ssrProps });
+hydrateRoot(document.getElementById("root"), <RouterProvider router={router} />);`
+
 func buildWithTemplate(buildTemplate string, params map[string]interface{}) (string, error) {
 	templ, err := template.New("buildTemplate").Parse(buildTemplate)
 	if err != nil {
@@ -54,6 +73,7 @@ func GenerateServerBuildContents(imports []string, filePath string, useLayout bo
 		"FilePath":           filePath,
 		"RenderFunction":     serverRenderFunction,
 		"SuppressConsoleLog": true,
+		"ImportApp":          true,
 	}
 	if useLayout {
 		params["RenderFunction"] = serverRenderFunctionWithLayout
@@ -67,6 +87,7 @@ func GenerateClientBuildContents(imports []string, filePath string, useLayout bo
 		"Imports":        imports,
 		"FilePath":       filePath,
 		"RenderFunction": clientRenderFunction,
+		"ImportApp":      true,
 	}
 	if useLayout {
 		params["RenderFunction"] = clientRenderFunctionWithLayout
@@ -112,6 +133,20 @@ func getReactRouterMajorVersion(frontendDir string) int {
 // GenerateServerSPABuildContents generates server build for SPA apps
 // mode: "router" uses StaticRouter for true hydration, "replace" uses page component rendering
 func GenerateServerSPABuildContents(imports []string, appPath string, mode string, frontendDir string) (string, error) {
+	if mode == "tanstack" {
+		imports = append(imports,
+			`import { renderToString } from "react-dom/server.browser";`,
+			`import { RouterProvider, createMemoryHistory } from "@tanstack/react-router";`,
+			`import { createSSRRouter } from "`+appPath+`";`,
+		)
+		params := map[string]interface{}{
+			"Imports":            imports,
+			"FilePath":           appPath,
+			"RenderFunction":     serverSPATanStackRenderFunction,
+			"SuppressConsoleLog": true,
+		}
+		return buildWithTemplate(baseTemplate, params)
+	}
 	if mode == "router" {
 		imports = append(imports, `import { renderToString } from "react-dom/server.browser";`)
 		// react-router-dom v7+ uses "react-router" for StaticRouter, v6 uses "react-router-dom/server"
@@ -125,6 +160,7 @@ func GenerateServerSPABuildContents(imports []string, appPath string, mode strin
 			"FilePath":           appPath,
 			"RenderFunction":     serverSPARouterRenderFunction,
 			"SuppressConsoleLog": true,
+			"ImportApp":          true,
 		}
 		return buildWithTemplate(baseTemplate, params)
 	}
@@ -135,6 +171,19 @@ func GenerateServerSPABuildContents(imports []string, appPath string, mode strin
 // GenerateClientSPABuildContents generates client SPA app build
 // mode: "router" uses hydrateRoot with BrowserRouter, "replace" uses createRoot (backward compatible)
 func GenerateClientSPABuildContents(imports []string, appPath string, mode string) (string, error) {
+	if mode == "tanstack" {
+		imports = append(imports,
+			`import { hydrateRoot } from "react-dom/client";`,
+			`import { RouterProvider, createBrowserHistory } from "@tanstack/react-router";`,
+			`import { createSSRRouter } from "`+appPath+`";`,
+		)
+		params := map[string]interface{}{
+			"Imports":        imports,
+			"FilePath":       appPath,
+			"RenderFunction": clientSPATanStackRenderFunction,
+		}
+		return buildWithTemplate(baseTemplate, params)
+	}
 	if mode == "router" {
 		imports = append(imports, `import { hydrateRoot } from "react-dom/client";`)
 		imports = append(imports, `import { BrowserRouter } from "react-router-dom";`)
@@ -142,6 +191,7 @@ func GenerateClientSPABuildContents(imports []string, appPath string, mode strin
 			"Imports":        imports,
 			"FilePath":       appPath,
 			"RenderFunction": clientSPARouterRenderFunction,
+			"ImportApp":      true,
 		}
 		return buildWithTemplate(baseTemplate, params)
 	}
@@ -151,6 +201,7 @@ func GenerateClientSPABuildContents(imports []string, appPath string, mode strin
 		"Imports":        imports,
 		"FilePath":       appPath,
 		"RenderFunction": clientSPAReplaceRenderFunction,
+		"ImportApp":      true,
 	}
 	return buildWithTemplate(baseTemplate, params)
 }

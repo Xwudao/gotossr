@@ -5,10 +5,10 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/yejune/gotossr/internal/cache"
-	"github.com/yejune/gotossr/internal/jsruntime"
-	"github.com/yejune/gotossr/internal/reactbuilder"
-	"github.com/yejune/gotossr/internal/utils"
+	"github.com/Xwudao/gotossr/internal/cache"
+	"github.com/Xwudao/gotossr/internal/jsruntime"
+	"github.com/Xwudao/gotossr/internal/reactbuilder"
+	"github.com/Xwudao/gotossr/internal/utils"
 )
 
 type Engine struct {
@@ -74,14 +74,15 @@ func New(config Config) (*Engine, error) {
 
 	// If using client SPA app, build bundles based on SPAHydrationMode
 	if config.ClientAppPath != "" {
-		if config.SPAHydrationMode == "router" {
-			// "router" mode: build server SPA bundle for StaticRouter rendering
+		// "router" and "tanstack" both render the complete app on the server.
+		// "replace" intentionally keeps the legacy per-page SSR behavior.
+		if config.SPAHydrationMode != "replace" {
 			if err = engine.buildServerSPAApp(); err != nil {
 				engine.Logger.Error("Failed to build server SPA app", "error", err)
 				return nil, err
 			}
 		}
-		// Both modes need client SPA bundle
+		// All modes need a client SPA bundle.
 		if err = engine.buildClientSPAApp(); err != nil {
 			engine.Logger.Error("Failed to build client SPA app", "error", err)
 			return nil, err

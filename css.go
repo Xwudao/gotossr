@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/yejune/gotossr/internal/utils"
+	"github.com/Xwudao/gotossr/internal/utils"
 )
 
 // BuildLayoutCSSFile builds the layout css file if it exists

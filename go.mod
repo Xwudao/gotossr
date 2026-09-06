@@ -1,4 +1,4 @@
-module github.com/yejune/gotossr
+module github.com/Xwudao/gotossr
 
 go 1.24.0
 

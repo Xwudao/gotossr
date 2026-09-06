@@ -6,8 +6,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/yejune/gotossr/internal/cache"
-	"github.com/yejune/gotossr/internal/utils"
+	"github.com/Xwudao/gotossr/internal/cache"
+	"github.com/Xwudao/gotossr/internal/utils"
 )
 
 // Config is the config for starting the engine
@@ -27,7 +27,8 @@ type Config struct {
 	// SPA hydration mode options (only used when ClientAppPath is set):
 	// - "router": wraps with StaticRouter/BrowserRouter for true hydration (default, requires react-router-dom)
 	// - "replace": uses createRoot to replace SSR HTML (no hydration, compatible with any SPA structure)
-	SPAHydrationMode string // "router" or "replace", defaults to "router"
+	// - "tanstack": hydrates a TanStack Router app exporting createSSRRouter
+	SPAHydrationMode string // "router", "replace", or "tanstack"; defaults to "router"
 	// External JS file options (for browser caching optimization):
 	// When StaticJSDir is set, JS bundles are written to files instead of inlined in HTML.
 	// This enables browser caching - the React library bundle rarely changes and can be cached.

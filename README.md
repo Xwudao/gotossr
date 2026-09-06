@@ -5,9 +5,9 @@ Build Go powered React web apps with server-side rendering.
 ---
 
 <p>
-    <a href="https://goreportcard.com/report/github.com/yejune/gotossr"><img src="https://goreportcard.com/badge/github.com/yejune/gotossr" alt="Go Report"></a>
-    <a href="https://pkg.go.dev/github.com/yejune/gotossr?tab=doc"><img src="http://img.shields.io/badge/GoDoc-Reference-blue.svg" alt="GoDoc"></a>
-    <a href="https://github.com/yejune/gotossr/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT%202.0-blue.svg" alt="MIT License"></a>
+    <a href="https://goreportcard.com/report/github.com/Xwudao/gotossr"><img src="https://goreportcard.com/badge/github.com/Xwudao/gotossr" alt="Go Report"></a>
+    <a href="https://pkg.go.dev/github.com/Xwudao/gotossr?tab=doc"><img src="http://img.shields.io/badge/GoDoc-Reference-blue.svg" alt="GoDoc"></a>
+    <a href="https://github.com/Xwudao/gotossr/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT%202.0-blue.svg" alt="MIT License"></a>
 </p>
 
 gotossr is a drop in plugin to **any** existing Go web framework to allow **server rendering** [React](https://react.dev/). It's powered by [esbuild](https://esbuild.github.io/) and allows for passing props from Go to React with **type safety**.
@@ -27,6 +27,7 @@ gotossr is a drop in plugin to **any** existing Go web framework to allow **serv
 
 - Lightning fast compiling with [esbuild](https://esbuild.github.io/)
 - V8 or QuickJS runtime (selectable)
+- React Router and TanStack Router SPA hydration
 - Auto generated Typescript structs for props
 - Hot reloading in development
 - Simple error reporting
@@ -47,11 +48,11 @@ See [gotossr-cli](https://github.com/yejune/gotossr-cli) for more details.
 ## 📝 Add to existing web server
 
 ```console
-$ go get -u github.com/yejune/gotossr
+$ go get -u github.com/Xwudao/gotossr
 ```
 
 ```go
-import gossr "github.com/yejune/gotossr"
+import gossr "github.com/Xwudao/gotossr"
 
 engine, err := gossr.New(gossr.Config{
     AppEnv:             "development", // or "production"
@@ -74,6 +75,12 @@ g.GET("/", func(c *gin.Context) {
     c.Writer.Write(response)
 })
 ```
+
+## TanStack Router hydration
+
+Set `ClientAppPath` and `SPAHydrationMode: "tanstack"`. The app must named-export `createSSRRouter({ history, props })`; gotossr supplies a memory history for SSR and a browser history for client hydration. `props` is the JSON serialized `RenderConfig.Props` plus `__requestPath`.
+
+See [`examples/tanstack-router`](examples/tanstack-router) for a runnable app.
 
 # ⚡ Performance
 

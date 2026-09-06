@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/yejune/gotossr/internal/utils"
+	"github.com/Xwudao/gotossr/internal/utils"
 
 	_ "github.com/tkrajina/typescriptify-golang-structs/typescriptify"
 )

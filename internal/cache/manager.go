@@ -3,7 +3,7 @@ package cache
 import (
 	"sync"
 
-	"github.com/yejune/gotossr/internal/reactbuilder"
+	"github.com/Xwudao/gotossr/internal/reactbuilder"
 )
 
 // LocalCache is an in-memory cache implementation

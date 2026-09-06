@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/gofiber/fiber/v2 v2.49.2
 	github.com/stretchr/testify v1.11.1
-	github.com/yejune/gotossr v0.0.0
+	github.com/Xwudao/gotossr v0.0.0
 )
 
 require (
@@ -37,4 +37,4 @@ require (
 	rogchap.com/v8go v0.9.0 // indirect
 )
 
-replace github.com/yejune/gotossr => ../..
+replace github.com/Xwudao/gotossr => ../..
